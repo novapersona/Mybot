@@ -1,0 +1,77 @@
+{
+  "users": {
+    "446582368": {
+      "id": 446582368,
+      "username": null,
+      "firstName": "IBROHIM",
+      "lastName": null,
+      "registeredAt": "2026-06-17T15:18:40.282Z"
+    },
+    "8357140149": {
+      "id": 8357140149,
+      "username": "Khojiakbar_17x",
+      "firstName": "Xojiakbar",
+      "lastName": null,
+      "registeredAt": "2026-06-16T18:05:26.454Z"
+    },
+    "8266915027": {
+      "id": 8266915027,
+      "username": null,
+      "firstName": "No. Name ?!",
+      "lastName": null,
+      "registeredAt": "2026-06-16T18:07:12.187Z"
+    },
+    "8297836307": {
+      "id": 8297836307,
+      "username": "bonu_06s",
+      "firstName": "bonu",
+      "lastName": null,
+      "registeredAt": "2026-06-16T18:08:22.228Z"
+    },
+    "8576920364": {
+      "id": 8576920364,
+      "username": "haloltredin",
+      "firstName": ":)",
+      "lastName": null,
+      "registeredAt": "2026-06-16T18:11:44.686Z"
+    },
+    "8419942233": {
+      "id": 8419942233,
+      "username": null,
+      "firstName": "Gapparov_712",
+      "lastName": null,
+      "registeredAt": "2026-06-17T08:33:51.858Z"
+    },
+    "8598881094": {
+      "id": 8598881094,
+      "username": "valiyev_550",
+      "firstName": "Мухаммад",
+      "lastName": "Валиев",
+      "registeredAt": "2026-06-17T08:45:07.080Z"
+    },
+    "7355207027": {
+      "id": 7355207027,
+      "username": null,
+      "firstName": "Abdurahmon",
+      "lastName": null,
+      "registeredAt": "2026-06-17T09:46:03.220Z"
+    }
+  },
+  "movies": {
+    "1342": {
+      "key": "1342",
+      "name": "UCH QAHRAMON",
+      "description": "film dostlik jasorat va qiyinchiliklarni yengish",
+      "fileId": "BAACAgQAAxkBAAIB22oyYAVuXTGOuesmyXwRVB4I6vZXAAJtHAACqlWwUCckFdaNHH8AATwE",
+      "fileType": "video"
+    },
+    "3066": {
+      "key": "3066",
+      "name": "DACHA KINO UZBEK TILIDA  2026",
+      "description": "oddiy",
+      "fileId": "BAACAgIAAxkBAAIBxGoyXlD1HuMLbtAMHkALD6MH82SQAAIioAACaE4ISd3J7ySHKRi4PAQ",
+      "fileType": "video"
+    }
+  },
+  "admins": []
+}
