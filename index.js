@@ -49,7 +49,7 @@ if (BOT_TOKEN === 'YOUR_BOT_TOKEN_HERE' || BOT_TOKEN === '') {
 }
 
 // Ma'lumotlar bazasi fayli manzili
-const DB_PATH = path.join(__dirname, 'database.json');
+let DB_PATH = path.join(__dirname, 'database.json');
 
 // Bazani o'qish funksiyasi
 function readDb() {
