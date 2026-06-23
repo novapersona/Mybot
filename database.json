@@ -55,6 +55,20 @@
       "firstName": "Abdurahmon",
       "lastName": null,
       "registeredAt": "2026-06-17T09:46:03.220Z"
+    },
+    "8820296018": {
+      "id": 8820296018,
+      "username": "u_l_u_g_b_e_k_01",
+      "firstName": "Ulug’bek",
+      "lastName": null,
+      "registeredAt": "2026-06-23T15:52:42.838Z"
+    },
+    "6390314381": {
+      "id": 6390314381,
+      "username": "NovaPers0na",
+      "firstName": "Muhammad Ali",
+      "lastName": "G'ulomov",
+      "registeredAt": "2026-06-23T15:52:42.849Z"
     }
   },
   "movies": {

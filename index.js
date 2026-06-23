@@ -7,7 +7,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const BOT_TOKEN = '8704179698:AAEORuQoAgCbxKe8ciDrc3x5FVSlJC1NN3s'; 
 
 // Super Admin Telegram ID sini shu yerga kiriting (raqam shaklida, masalan: 123456789)
-const SUPER_ADMIN_ID = '8357140149'; 
+const SUPER_ADMIN_ID = '6390314381'; 
 
 // Bot a'zo bo'lishi shart bo'lgan kanallar ro'yxati
 // DIQQAT: Bot ushbu kanallarda administrator (admin) bo'lishi shart!
