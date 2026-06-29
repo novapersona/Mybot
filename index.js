@@ -1,9 +1,19 @@
+// 1. Oldin mavjud bo'lgan importlar
 import fs from 'fs';
 import path from 'path';
 import https from 'https';
 import http from 'http';
 import TelegramBot from 'node-telegram-bot-api';
 
+// 2. MANA SHU YERGA QO'SHASIZ (fileURLToPath ni ham import qilamiz):
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// 3. Pastda esa sizning eski kodingiz davom etadi:
+let DB_PATH = path.join(__dirname, 'database.json');
+
+// Botning qolgan kodlari...
 // ==================== DUMMY WEB SERVER FOR RENDER.COM ====================
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
