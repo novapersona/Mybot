@@ -1,13 +1,25 @@
-const fs = require('fs');
-const path = require('path');
-const TelegramBot = require('node-telegram-bot-api');
+import fs from 'fs';
+import path from 'path';
+import https from 'https';
+import http from 'http';
+import TelegramBot from 'node-telegram-bot-api';
+
+// ==================== DUMMY WEB SERVER FOR RENDER.COM ====================
+const PORT = process.env.PORT || 3000;
+http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Kinochi Bot is active and running 24/7!\n');
+}).listen(PORT, () => {
+  console.log(`Render.com port binding active on port ${PORT}`);
+});
+// =========================================================================
 
 // ==================== SOZLAMALAR (CONFIG) ====================
 // Bot tokenini shu yerga kiriting
-const BOT_TOKEN = '8704179698:AAEORuQoAgCbxKe8ciDrc3x5FVSlJC1NN3s'; 
+const BOT_TOKEN = '8704179698:AAEORuQoAgCbxKe8ciDrc3x5FVSlJC1NN3s';
 
 // Super Admin Telegram ID sini shu yerga kiriting (raqam shaklida, masalan: 123456789)
-const SUPER_ADMIN_ID = '6390314381'; 
+const SUPER_ADMIN_ID = '6390314381';
 
 // Bot a'zo bo'lishi shart bo'lgan kanallar ro'yxati
 // DIQQAT: Bot ushbu kanallarda administrator (admin) bo'lishi shart!
@@ -18,19 +30,24 @@ const CHANNELS = [
 
 // Donat (xayriya) uchun karta ma'lumotlari
 const CARD_DETAILS = `💳 Karta: 8600 0000 0000 0000\n👤 Ega: ISMI SHARIFI\n🏦 Bank: Humo / Uzcard`;
+
+// Zaxira kanali/guruhi ID-si (Masalan: -1001234567890 yoki '@zaxira_kanali')
+// Bot ushbu chatda xabar yuborish va uni PIN qilish huquqiga ega bo'lishi kerak!
+// Bo'sh qoldirilsa zaxiralash ishlamaydi va faqat local fayl ishlatiladi.
+const BACKUP_CHAT_ID = '';
 // =============================================================
 
 // Kanal ID/Usernamelarini to'g'rilash (masalan, link yuborilgan bo'lsa uni @username formatiga o'tkazish)
 function formatChannelId(id) {
   if (typeof id !== 'string') return id;
   let clean = id.trim();
-  
+
   // URL va ortiqcha protokollarni olib tashlash (masalan, https://t.me/kanal -> @kanal)
   clean = clean.replace(/^(https?:\/\/)?(www\.)?(t\.me|telegram\.me)\//i, '');
-  
+
   // So'rov parametrlari (?boost=...) yoki qo'shimcha / belgilarni olib tashlash
   clean = clean.split('/')[0].split('?')[0];
-  
+
   // Agar raqamli ID bo'lmasa yoki @ bilan boshlanmasa, @ belgisini qo'shish
   if (!clean.startsWith('@') && !clean.startsWith('-') && isNaN(clean)) {
     clean = '@' + clean;
@@ -71,18 +88,92 @@ function readDb() {
   }
 }
 
+// Faylni url orqali yuklab olish yordamchi funksiyasi
+function downloadFile(url, destPath) {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      if (res.statusCode !== 200) {
+        reject(new Error(`Yuklab olishda xatolik: ${res.statusCode}`));
+        return;
+      }
+      const file = fs.createWriteStream(destPath);
+      res.pipe(file);
+      file.on('finish', () => {
+        file.close(resolve);
+      });
+    }).on('error', (err) => {
+      reject(err);
+    });
+  });
+}
+
+// Telegram zaxiradan bazani tiklash
+async function restoreDbFromTelegram() {
+  if (!BACKUP_CHAT_ID) {
+    console.log('BACKUP_CHAT_ID sozlanmagan. Tiklash o\'tkazib yuborildi.');
+    return;
+  }
+  try {
+    console.log('Telegram zaxiradan ma\'lumotlarni tiklash tekshirilmoqda...');
+    const chat = await bot.getChat(BACKUP_CHAT_ID);
+    if (chat.pinned_message && chat.pinned_message.document) {
+      const fileId = chat.pinned_message.document.file_id;
+      const fileLink = await bot.getFileLink(fileId);
+
+      console.log('Zaxira fayli yuklab olinmoqda...');
+      await downloadFile(fileLink, DB_PATH);
+      console.log('Ma\'lumotlar bazasi zaxiradan muvaffaqiyatli tiklandi!');
+    } else {
+      console.log('Zaxira fayli topilmadi (pinned message yo\'q).');
+    }
+  } catch (err) {
+    console.error('Zaxirani tiklashda xatolik:', err.message);
+  }
+}
+
+// Telegramga bazani zaxiralash
+let backupTimeout = null;
+function backupDbToTelegram() {
+  if (!BACKUP_CHAT_ID) return;
+
+  if (backupTimeout) clearTimeout(backupTimeout);
+
+  backupTimeout = setTimeout(async () => {
+    try {
+      console.log('Ma\'lumotlar bazasi Telegramga yuklanmoqda...');
+      const dbFile = fs.createReadStream(DB_PATH);
+      const msg = await bot.sendDocument(BACKUP_CHAT_ID, dbFile, {
+        caption: `Kinochi Bot zaxira bazasi. Sana: ${new Date().toLocaleString('uz-UZ')}`
+      });
+      await bot.pinChatMessage(BACKUP_CHAT_ID, msg.message_id);
+      console.log('Baza muvaffaqiyatli zaxiralandi va pin qilindi!');
+    } catch (err) {
+      console.error('Zaxiralashda xatolik:', err.message);
+    }
+  }, 5000);
+}
+
 // Bazaga yozish funksiyasi
 function writeDb(db) {
   try {
     fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2), 'utf8');
+    backupDbToTelegram();
   } catch (err) {
     console.error('Bazaga yozishda xatolik:', err);
   }
 }
 
-// Botni ishga tushirish
-const bot = new TelegramBot(BOT_TOKEN, { polling: true });
-console.log('Kino bot ishga tushdi...');
+// Botni ishga tushirish (polling false qilib boshlaymiz)
+const bot = new TelegramBot(BOT_TOKEN, { polling: false });
+
+(async () => {
+  // Avval zaxiradan bazani tiklaymiz
+  await restoreDbFromTelegram();
+
+  // Keyin botni ishga tushiramiz
+  bot.startPolling();
+  console.log('Kino bot ishga tushdi...');
+})();
 
 // Foydalanuvchini ro'yxatga olish
 function registerUser(msg) {
@@ -105,11 +196,11 @@ function isAdminUser(userId) {
   const db = readDb();
   const userIdStr = userId.toString();
   const superAdminStr = SUPER_ADMIN_ID.toString();
-  
+
   if (userIdStr === superAdminStr) {
     return true;
   }
-  
+
   return db.admins && db.admins.includes(userIdStr);
 }
 
@@ -117,7 +208,7 @@ function isAdminUser(userId) {
 async function checkSubscription(userId) {
   const userIdStr = userId.toString();
   const superAdminStr = SUPER_ADMIN_ID.toString();
-  
+
   // Super admin uchun obunani tekshirish shart emas
   if (userIdStr === superAdminStr) {
     return true;
@@ -132,7 +223,7 @@ async function checkSubscription(userId) {
     }
   }
   if (!hasValidChannels) {
-    return true; 
+    return true;
   }
 
   for (const channel of CHANNELS) {
@@ -154,7 +245,7 @@ async function checkSubscription(userId) {
       console.log(`Ushbu kanal tekshiruvi xatolik tufayli o'tkazib yuborildi.`);
       console.log(`------------------------------------------------------------------\n`);
       // Agar bot admin bo'lmasa yoki kanal shaxsiy profil bo'lsa, bu kanalni o'tkazib yuboramiz va boshqa kanallarni tekshirishni davom ettiramiz
-      continue; 
+      continue;
     }
   }
   return true;
@@ -163,7 +254,7 @@ async function checkSubscription(userId) {
 // Obuna bo'lish so'rovini yuborish
 function sendSubscriptionPrompt(chatId) {
   const keyboard = [];
-  
+
   CHANNELS.forEach((channel) => {
     let url = channel.id;
     // Agar id link bo'lmasa, uni link formatiga o'tkazamiz
@@ -173,7 +264,7 @@ function sendSubscriptionPrompt(chatId) {
     }
     keyboard.push([{ text: channel.name, url: url }]);
   });
-  
+
   keyboard.push([{ text: "Tasdiqlash ✅", callback_data: "check_sub" }]);
 
   bot.sendMessage(chatId, "Botdan foydalanish uchun quyidagi kanallarga obuna bo'ling va 'Tasdiqlash' tugmasini bosing:", {
@@ -188,11 +279,11 @@ function getMainMenuKeyboard(userId) {
   const keyboard = [
     [{ text: "🔍 Kino izlash" }, { text: "🏆 Top Donaters" }]
   ];
-  
+
   if (isAdminUser(userId)) {
     keyboard.push([{ text: "⚙️ Admin Panel" }]);
   }
-  
+
   return {
     reply_markup: {
       keyboard: keyboard,
@@ -206,7 +297,7 @@ function sendAdminPanel(chatId, userId) {
   const userIdStr = userId.toString();
   const superAdminStr = SUPER_ADMIN_ID.toString();
   const isSuper = userIdStr === superAdminStr;
-  
+
   const inlineKeyboard = [
     [
       { text: "➕ Kino qo'shish", callback_data: "admin_add_movie" },
@@ -216,7 +307,7 @@ function sendAdminPanel(chatId, userId) {
       { text: "📋 Kinolar ro'yxati", callback_data: "admin_list_movies" }
     ]
   ];
-  
+
   if (isSuper) {
     inlineKeyboard.push([
       { text: "➕ Admin qo'shish", callback_data: "super_add_admin" },
@@ -227,7 +318,7 @@ function sendAdminPanel(chatId, userId) {
       { text: "📊 Statistika", callback_data: "super_stats" }
     ]);
   }
-  
+
   bot.sendMessage(chatId, "⚙️ Admin boshqaruv paneli:", {
     reply_markup: {
       inline_keyboard: inlineKeyboard
@@ -270,7 +361,7 @@ bot.on('message', async (msg) => {
   // Agar foydalanuvchi biror state da bo'lsa
   if (userStates[chatId]) {
     const currentState = userStates[chatId];
-    
+
     // ADMIN: Kino qo'shish jarayoni
     if (currentState.state === 'AWAITING_MOVIE_NAME') {
       if (!text) {
@@ -353,9 +444,9 @@ bot.on('message', async (msg) => {
       writeDb(db);
 
       bot.sendMessage(
-        chatId, 
-        `✅ Kino muvaffaqiyatli saqlandi!\n🔑 Kalit raqam: *${currentState.key}*\n🎥 Nomi: *${currentState.name}*`, 
-        { 
+        chatId,
+        `✅ Kino muvaffaqiyatli saqlandi!\n🔑 Kalit raqam: *${currentState.key}*\n🎥 Nomi: *${currentState.name}*`,
+        {
           parse_mode: 'Markdown',
           reply_markup: getMainMenuKeyboard(userId).reply_markup
         }
@@ -392,12 +483,12 @@ bot.on('message', async (msg) => {
         bot.sendMessage(chatId, "❌ Admin ID faqat raqamlardan iborat bo'lishi kerak. Qayta kiriting:");
         return;
       }
-      
+
       const db = readDb();
       if (!db.admins) {
         db.admins = [];
       }
-      
+
       if (db.admins.includes(adminId) || adminId === SUPER_ADMIN_ID.toString()) {
         bot.sendMessage(chatId, "❌ Ushbu foydalanuvchi allaqachon admin.", getMainMenuKeyboard(userId));
       } else {
@@ -417,7 +508,7 @@ bot.on('message', async (msg) => {
       if (!text) return;
       const adminId = text.trim();
       const db = readDb();
-      
+
       if (db.admins && db.admins.includes(adminId)) {
         db.admins = db.admins.filter(id => id !== adminId);
         writeDb(db);
@@ -436,8 +527,8 @@ bot.on('message', async (msg) => {
   // Buyruqlar va oddiy xabarlarni qayta ishlash
   if (text === '/start') {
     bot.sendMessage(
-      chatId, 
-      `Assalomu alaykum! Kino botimizga xush kelibsiz.\n\nKino topish uchun kalit raqamini yuboring.`, 
+      chatId,
+      `Assalomu alaykum! Kino botimizga xush kelibsiz.\n\nKino topish uchun kalit raqamini yuboring.`,
       getMainMenuKeyboard(userId)
     );
     return;
@@ -454,7 +545,7 @@ bot.on('message', async (msg) => {
       `2. Sardor — 70 000 UZS\n` +
       `3. Shahzod — 50 000 UZS\n\n` +
       `Loyiha rivoji va faoliyatini qo'llab-quvvatlash istagida bo'lsangiz, quyidagi tugma orqali donat qilishingiz mumkin!`;
-      
+
     bot.sendMessage(chatId, textStats, {
       parse_mode: 'Markdown',
       reply_markup: {
@@ -475,10 +566,10 @@ bot.on('message', async (msg) => {
   if (text) {
     const db = readDb();
     const movie = db.movies[text.trim()];
-    
+
     if (movie) {
       const caption = `🎥 *Kino nomi:* ${movie.name}\n\n📝 *Tavsif:* ${movie.description}\n\n🔑 *Kodi:* ${movie.key}`;
-      
+
       if (movie.fileType === 'video') {
         bot.sendVideo(chatId, movie.fileId, { caption: caption, parse_mode: 'Markdown' });
       } else if (movie.fileType === 'document') {
@@ -618,9 +709,9 @@ bot.on('callback_query', async (query) => {
     const db = readDb();
     const users = db.users || {};
     const userIds = Object.keys(users);
-    
+
     let statsText = `📊 *Bot statistikasi:*\n\n👥 Umumiy foydalanuvchilar soni: *${userIds.length}* ta\n`;
-    
+
     if (userIds.length > 0) {
       statsText += `\n*Oxirgi qo'shilgan 10 ta foydalanuvchi:*\n`;
       // Oxirgi 10 ta foydalanuvchi
