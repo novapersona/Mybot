@@ -11,7 +11,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // 3. Pastda esa sizning eski kodingiz davom etadi:
-let DB_PATH = path.join(__dirname, 'database.json');
 
 // Botning qolgan kodlari...
 // ==================== DUMMY WEB SERVER FOR RENDER.COM ====================
